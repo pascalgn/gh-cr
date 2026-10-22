@@ -1,0 +1,23 @@
+.prTabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+
+.prTabs-link {
+  padding: 0.5rem 0.875rem;
+  border-bottom: 2px solid transparent;
+  color: var(--mantine-color-dimmed);
+  font-size: 0.9375rem;
+  text-decoration: none;
+}
+
+.prTabs-link:hover {
+  color: var(--mantine-color-text);
+}
+
+.prTabs-link.active {
+  border-bottom-color: var(--mantine-primary-color-filled);
+  color: var(--mantine-color-text);
+  font-weight: 600;
+}

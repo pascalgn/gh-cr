@@ -1,0 +1,31 @@
+.reviewThread-primary,
+.reviewThread-current {
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-sm);
+  overflow: hidden;
+}
+
+.reviewThread-primaryComment {
+  padding: 0.75rem;
+}
+
+.reviewThread-primaryDiff,
+.reviewThread-current > .diffText,
+.reviewThread-current > * {
+  border-top: 0 none;
+}
+
+.reviewThread-primaryDiff {
+  border-top: 1px solid var(--mantine-color-default-border);
+}
+
+.reviewThread-diffLabel {
+  padding: 0.4rem 0.75rem;
+  background: var(--mantine-color-default-hover);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+
+.reviewThread-replies {
+  padding-left: 0.875rem;
+  border-left: 2px solid var(--mantine-color-default-border);
+}

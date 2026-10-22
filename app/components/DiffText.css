@@ -1,0 +1,41 @@
+.diffText {
+  margin: 0;
+  overflow-x: auto;
+  font-family: var(--diff-font);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  tab-size: 2;
+}
+
+.diffText-line {
+  display: block;
+  min-width: 100%;
+  width: max-content;
+  padding: 0 0.75rem;
+  white-space: pre;
+}
+
+.diffText-add {
+  background: var(--diff-add-bg);
+}
+
+.diffText-del {
+  background: var(--diff-del-bg);
+}
+
+.diffText-meta {
+  color: var(--diff-meta-fg);
+}
+
+/*
+ * Marks the lines a comment is about. The tint is painted as a background
+ * image so the add/del background colour still reads through, and the accent
+ * is an inset shadow rather than a border so the text does not shift.
+ */
+.diffText-highlight {
+  background-image: linear-gradient(
+    var(--diff-highlight-bg),
+    var(--diff-highlight-bg)
+  );
+  box-shadow: inset 3px 0 0 var(--diff-highlight-accent);
+}

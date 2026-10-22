@@ -6,15 +6,15 @@ end to end, **read-only**. Writes come after.
 
 ## Decisions taken (deviations from SPEC noted)
 
-| Topic | Decision | Note |
-| --- | --- | --- |
-| Git access | Shell out to the `git` CLI via a thin `server/git/*` wrapper | **Deviates from SPEC** (nodegit). nodegit's latest release targets Node ≤20 and will not build on the local Node 24. The CLI also gives us three-dot diffs, rename detection and `blame` for free. The wrapper keeps it swappable. |
-| Backend | No separate service. One React Router (framework mode) app; loaders/actions import `app/server/*` directly | Single process, shared types, no API schema to maintain. |
-| v1 scope | Read-only | No comment creation / reply / resolve yet. |
-| Diff rendering | Raw unified diff text in a `<pre>`, light +/−/@@ coloring | No row model, no gutters yet. Enough to validate anchoring; a real renderer is a later pass. |
-| DB | `better-sqlite3`, hand-written SQL, one `schema.sql` applied on boot | Synchronous API fits loaders well. |
-| GitHub API | `@octokit/graphql` for PR + review threads, `@octokit/rest` only if needed | Thread resolution state (`isResolved`) exists **only** in GraphQL, and we want that field from day one. |
-| Auth | `GITHUB_TOKEN` env, falling back to `gh auth token` | `gh` is already authenticated locally. Token is never persisted. |
+| Topic          | Decision                                                                                                   | Note                                                                                                                                                                                                                               |
+| -------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Git access     | Shell out to the `git` CLI via a thin `server/git/*` wrapper                                               | **Deviates from SPEC** (nodegit). nodegit's latest release targets Node ≤20 and will not build on the local Node 24. The CLI also gives us three-dot diffs, rename detection and `blame` for free. The wrapper keeps it swappable. |
+| Backend        | No separate service. One React Router (framework mode) app; loaders/actions import `app/server/*` directly | Single process, shared types, no API schema to maintain.                                                                                                                                                                           |
+| v1 scope       | Read-only                                                                                                  | No comment creation / reply / resolve yet.                                                                                                                                                                                         |
+| Diff rendering | Raw unified diff text in a `<pre>`, light +/−/@@ coloring                                                  | No row model, no gutters yet. Enough to validate anchoring; a real renderer is a later pass.                                                                                                                                       |
+| DB             | `better-sqlite3`, hand-written SQL, one `schema.ts` string applied on boot                                 | Synchronous API fits loaders well. The schema is inlined as a TS string rather than a `.sql` file because vite does not emit the `.sql` into `build/server/`.                                                                      |
+| GitHub API     | `@octokit/graphql` for PR + review threads, `@octokit/rest` only if needed                                 | Thread resolution state (`isResolved`) exists **only** in GraphQL, and we want that field from day one.                                                                                                                            |
+| Auth           | `GITHUB_TOKEN` env, falling back to `gh auth token`                                                        | `gh` is already authenticated locally. Token is never persisted.                                                                                                                                                                   |
 
 ## Storage layout
 
@@ -64,21 +64,33 @@ PRs are tracked, so it runs synchronously in the route action — no job queue.
 
 ## The interesting part: anchoring a comment to the current diff
 
-For the comment detail view we need "the chunk of the *current* diff this comment is
+For the comment detail view we need "the chunk of the _current_ diff this comment is
 about". v1 heuristic, in order:
 
 1. Current diff for the file: `git diff -U3 <merge_base_sha> <head_sha> -- <path>`.
 2. **Thread still anchored** (`line` is not null — GitHub resolved it against head):
    pick the hunk whose new-side range covers `line`. Done.
 3. **Thread outdated** (`line` is null): take the anchor line text — the last line of
-   `diff_hunk`, minus its `+`/`-`/` ` marker — and search the head version of the file
-   (`git show <head_sha>:<path>`) for it. Pick the occurrence closest to
-   `original_line`, then find the hunk covering that new line number.
+   `diff_hunk`, minus its `+`/`-`/` ` marker — and look for it in the head version of
+   the file (`git show <head_sha>:<path>`), in three passes, stopping at the first hit:
+   exact match → substring containment → character-bigram Dice similarity ≥ 0.6. Of the
+   candidate lines, pick the one closest to `original_line`, then find the hunk covering
+   it. Exact matching alone was tried first and is far too brittle on real PRs: an
+   appended ` (for example, ...)` or a `[suffix](#suffix)` → `suffix` rewording is enough
+   to lose a comment that a human matches at a glance.
 4. **No hunk covers it**: say so explicitly ("no longer part of the diff") and offer the
    full-file-diff modal.
 
 The "original diff" section below it needs no computation — GitHub hands us `diff_hunk`
 verbatim.
+
+GitHub reports a comment's position as a _range on a side_, and all four fields matter:
+`startLine`/`line` at head, `originalStartLine`/`originalLine` at the commit it was
+written against (the original pair survives outdating, the current pair goes null), and
+`diffSide` — `RIGHT` indexes the head file, `LEFT` the base file. So anchoring is
+side-aware (old-side hunk ranges and base content for `LEFT`) and range-aware: a
+relocated multi-line comment keeps its original span. Both diffs highlight the commented
+lines.
 
 ## Routes
 
@@ -86,7 +98,7 @@ verbatim.
 /                                             home: tracked PR list + add form (action)
 /pr/:owner/:repo/:number                      layout: header, Refresh action, view tabs
   index                                       diff view: file tree (left) + raw diffs
-  comments                                    comments view: thread list + its hunk
+  comments                                    comments view: each thread + its current-diff chunk
   comments/:threadId                          detail: comment, current chunk, original chunk
                                               ?file=<path> → full file diff in a Modal
 ```
@@ -104,7 +116,8 @@ app/
     paths.ts                                         (env-paths, no suffix)
     refreshPullRequest.ts                            (GitHub + git, one transaction)
     anchorComment.ts                                 (heuristic above) + unit tests
-    db/             connection.ts, schema.sql, and the query files
+    parseUnifiedDiff.ts, findHunkForLine.ts          (pure diff slicing) + unit tests
+    db/             connection.ts, schema.ts, rows.ts, and the query files
     github/         client.ts, fetchPullRequest.ts   (GraphQL query + types)
     git/            gitRepo.ts (exec wrapper), fetchRefs.ts, diffFile.ts, showFile.ts
 ```

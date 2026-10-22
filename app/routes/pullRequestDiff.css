@@ -1,0 +1,28 @@
+.prDiff {
+  display: grid;
+  grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.prDiff-tree {
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+}
+
+.prDiff-files {
+  min-width: 0;
+}
+
+@media (max-width: 48em) {
+  .prDiff {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .prDiff-tree {
+    position: static;
+    max-height: 20rem;
+  }
+}

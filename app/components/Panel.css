@@ -1,0 +1,39 @@
+.panel {
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--mantine-color-default-border);
+  background: var(--mantine-color-default-hover);
+}
+
+.panel-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.panel-actions {
+  flex: none;
+}
+
+.panel-body {
+  padding: 0.75rem;
+  min-width: 0;
+}
+
+.panel-body--flush {
+  padding: 0;
+}
+
+.panel-pathLink {
+  font-family: var(--diff-font);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}

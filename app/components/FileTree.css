@@ -1,0 +1,65 @@
+.fileTree-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fileTree-empty {
+  margin: 0;
+  padding: 0.5rem;
+  color: var(--mantine-color-dimmed);
+  font-size: 0.875rem;
+}
+
+.fileTree-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  border: 0;
+  border-radius: var(--mantine-radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fileTree-item:hover {
+  background: var(--mantine-color-default-hover);
+}
+
+.fileTree-item--selected {
+  background: var(--mantine-color-default-hover);
+  font-weight: 600;
+}
+
+.fileTree-status {
+  flex: none;
+  width: 1ch;
+  font-family: var(--diff-font);
+  font-weight: 700;
+}
+
+.fileTree-status--added {
+  color: var(--mantine-color-green-7);
+}
+
+.fileTree-status--modified {
+  color: var(--mantine-color-yellow-7);
+}
+
+.fileTree-status--removed {
+  color: var(--mantine-color-red-7);
+}
+
+.fileTree-status--renamed {
+  color: var(--mantine-color-blue-7);
+}
+
+.fileTree-path {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

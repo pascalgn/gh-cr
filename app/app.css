@@ -1,0 +1,32 @@
+:root {
+  --diff-add-bg: #e6ffec;
+  --diff-del-bg: #ffebe9;
+  --diff-meta-fg: #57606a;
+  --diff-highlight-bg: rgba(212, 167, 44, 0.18);
+  --diff-highlight-accent: #bf8700;
+  --diff-font:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+[data-mantine-color-scheme="dark"] {
+  --diff-add-bg: #12261e;
+  --diff-del-bg: #25171c;
+  --diff-meta-fg: #8b949e;
+  --diff-highlight-bg: rgba(210, 153, 34, 0.16);
+  --diff-highlight-accent: #d29922;
+}
+
+body {
+  margin: 0;
+}
+
+.errorBoundary {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.errorBoundary pre {
+  overflow-x: auto;
+  padding: 1rem;
+}
