@@ -8,19 +8,52 @@
 }
 
 .diffText-line {
-  display: block;
+  display: flex;
   min-width: 100%;
   width: max-content;
-  padding: 0 0.75rem;
   white-space: pre;
+}
+
+/*
+ * The numbers stay put while the code scrolls sideways, so a long line never
+ * costs you your place. They are their own, opaque layer for that reason.
+ */
+.diffText-gutter {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  flex: none;
+  display: flex;
+  user-select: none;
+  color: var(--diff-meta-fg);
+  background: var(--diff-gutter-bg);
+  border-right: 1px solid var(--diff-gutter-border);
+}
+
+.diffText-num {
+  width: var(--diff-num-width, 3ch);
+  padding: 0 0.5rem;
+  text-align: right;
+}
+
+.diffText-code {
+  padding: 0 0.75rem;
 }
 
 .diffText-add {
   background: var(--diff-add-bg);
 }
 
+.diffText-add > .diffText-gutter {
+  background: var(--diff-add-gutter-bg);
+}
+
 .diffText-del {
   background: var(--diff-del-bg);
+}
+
+.diffText-del > .diffText-gutter {
+  background: var(--diff-del-gutter-bg);
 }
 
 .diffText-meta {
@@ -28,14 +61,36 @@
 }
 
 /*
- * Marks the lines a comment is about. The tint is painted as a background
- * image so the add/del background colour still reads through, and the accent
- * is an inset shadow rather than a border so the text does not shift.
+ * The comment button sits in the sticky gutter. It stays visible rather than
+ * appearing on hover: a control nobody can see is a control nobody finds.
+ * Hovering the row just brings it forward.
  */
-.diffText-highlight {
-  background-image: linear-gradient(
-    var(--diff-highlight-bg),
-    var(--diff-highlight-bg)
-  );
-  box-shadow: inset 3px 0 0 var(--diff-highlight-accent);
+.diffText-add-comment {
+  flex: none;
+  width: 1.1rem;
+  margin: 0.1rem 0 0.1rem 0.15rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--mantine-radius-sm);
+  background: var(--mantine-color-default-border);
+  color: var(--diff-meta-fg);
+  font: inherit;
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.diffText-line:hover .diffText-add-comment,
+.diffText-add-comment:focus-visible {
+  background: var(--mantine-color-blue-filled);
+  color: var(--mantine-color-white);
+}
+
+.diffText-form {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--mantine-color-default-border);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+  background: var(--diff-gutter-bg);
+  white-space: normal;
 }

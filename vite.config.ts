@@ -7,6 +7,6 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   ssr: {
-    noExternal: ["@mantine/core", "@mantine/hooks"],
+    noExternal: ["@mantine/core", "@mantine/hooks", "@mantine/code-highlight"],
   },
 });

@@ -1,22 +1,15 @@
 import type { ReviewThread } from "../types";
 
-function formatRange(startLine: number | null, endLine: number): string {
-  return startLine === null || startLine === endLine
-    ? `${endLine}`
-    : `${startLine}-${endLine}`;
-}
-
 /**
- * Titles a thread as `path:line`, or `path:start-end` when it spans several
- * lines. Outdated threads have no line at head, so they fall back to the
- * range the thread was originally written against.
+ * Titles a thread as `path:line`, or `path:start-end` when the comment spans
+ * several lines. Positions come from the diff the thread was written against,
+ * which is the only position GitHub reports for an outdated thread.
  */
 export function threadLabel(thread: ReviewThread): string {
-  const range =
-    thread.line !== null
-      ? formatRange(thread.startLine, thread.line)
-      : thread.originalLine !== null
-        ? formatRange(thread.originalStartLine, thread.originalLine)
-        : null;
-  return range === null ? thread.path : `${thread.path}:${range}`;
+  const { originalLine, originalStartLine, path } = thread;
+  return originalLine === null
+    ? path
+    : originalStartLine === null || originalStartLine === originalLine
+      ? `${path}:${originalLine}`
+      : `${path}:${originalStartLine}-${originalLine}`;
 }

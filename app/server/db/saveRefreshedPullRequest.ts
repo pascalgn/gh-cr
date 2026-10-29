@@ -56,11 +56,11 @@ export function saveRefreshedPullRequest(
   );
   const insertThread = database.prepare(
     `INSERT INTO review_threads (
-       id, pull_request_id, path, line, start_line, original_line,
+       id, pull_request_id, path, original_line,
        original_start_line, diff_side, is_resolved, is_outdated
      )
      VALUES (
-       @id, @pullRequestId, @path, @line, @startLine, @originalLine,
+       @id, @pullRequestId, @path, @originalLine,
        @originalStartLine, @diffSide, @isResolved, @isOutdated
      )`,
   );
@@ -96,8 +96,6 @@ export function saveRefreshedPullRequest(
         id: thread.id,
         pullRequestId: pullRequest.id,
         path: thread.path,
-        line: thread.line,
-        startLine: thread.startLine,
         originalLine: thread.originalLine,
         originalStartLine: thread.originalStartLine,
         diffSide: thread.diffSide,

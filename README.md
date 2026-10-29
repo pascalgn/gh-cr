@@ -25,8 +25,9 @@ hit Track.
 ## How it works
 
 Nothing is fetched from GitHub while you browse. A **Refresh** on a PR page syncs that
-one PR: its review threads go into a local sqlite DB, and its base and head refs are
-fetched into a local bare git repo, which then serves every diff. All PRs of the same
+one PR: its review threads go into a local sqlite DB, and its base and head refs — plus
+every commit a comment was written on, so the original diffs can be rebuilt offline —
+are fetched into a local bare git repo, which then serves every diff. All PRs of the same
 GitHub repo share one bare repo. Local git state is never authoritative — force pushes
 upstream simply overwrite it.
 
@@ -50,6 +51,13 @@ repos/<owner>__<repo>.git
 
 ## Status
 
-v1 is **read-only**: track, refresh, diff view, comments view, and the comment detail
-view with its anchoring heuristic. Writing comments, replying and resolving are not
-implemented yet.
+Working: track, refresh, diff view, comments view (filterable by resolved state and
+root-comment author), the comment detail view with its anchoring heuristic, and
+resolving/unresolving threads, and replying to a thread. Writes go straight to GitHub
+and need write access to the repository.
+
+Comment bodies render as GitHub-flavoured markdown.
+
+New comments are started from the `+` button in the line-number gutter of any
+diff showing the current state — the diff view, a thread's current diff, and the
+full-file-diff modal. They post as standalone comments, not as part of a pending review.

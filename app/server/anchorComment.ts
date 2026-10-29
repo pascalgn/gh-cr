@@ -1,13 +1,12 @@
+import { SINGLE_LINE_CONTEXT } from "../originalRange";
+import { confirmsAnchor } from "./confirmsAnchor";
+import { mapLineThroughDiff } from "./mapLineThroughDiff";
 import type { AnchorResult, DiffSide } from "../types";
 import { diceCoefficient } from "./diceCoefficient";
 import { findHunkForLine } from "./findHunkForLine";
 import { parseUnifiedDiff } from "./parseUnifiedDiff";
 
 export interface AnchorCommentOptions {
-  /** Last line of the range in the current head, null when outdated. */
-  line: number | null;
-  /** First line of the range in the current head. Null means same as `line`. */
-  startLine: number | null;
   /** Last line of the range as originally written. */
   originalLine: number | null;
   /** First line of the original range. Null means same as `originalLine`. */
@@ -20,6 +19,17 @@ export interface AnchorCommentOptions {
   sideFileContent: string | null;
   /** The diff fragment GitHub captured when the comment was written. */
   diffHunk: string;
+  /**
+   * The file's diff at the commit the comment was written on. Without it a
+   * match cannot be corroborated, so it is reported unconfirmed.
+   */
+  originalDiff?: string;
+  /**
+   * The file's own old-to-new diff: its content at the comment's commit
+   * against its content at head. Lets the comment be placed by position when
+   * its code no longer resembles what was written.
+   */
+  positionDiff?: string;
 }
 
 /** Shortest overlap, in non-whitespace characters, that may count as containment. */
@@ -39,6 +49,8 @@ function notInDiff(side: DiffSide): AnchorResult {
     line: null,
     startLine: null,
     side,
+    via: "content",
+    confirmed: false,
   };
 }
 
@@ -141,29 +153,37 @@ function relocatedLine(
 }
 
 /**
- * The start of a relocated range: the matched line pushed back by however many
- * lines the original range spanned, never above it nor before the first line.
+ * The start of a matched range: the matched line pushed back by however many
+ * lines the original section spanned, never above it nor before the first line.
+ * A single-line comment carries the same leading context as `originalRange`
+ * gives it, so both diffs mark a section of the same height.
  */
-function relocatedStartLine(
+function matchedStartLine(
   matchedLine: number,
   originalLine: number | null,
   originalStartLine: number | null,
 ): number {
-  const span = (originalLine ?? 0) - (originalStartLine ?? originalLine ?? 0);
+  const span =
+    originalStartLine === null
+      ? SINGLE_LINE_CONTEXT
+      : (originalLine ?? originalStartLine) - originalStartLine;
   return Math.min(matchedLine, Math.max(1, matchedLine - span));
 }
 
-/** Finds the hunk of the current diff a review thread refers to, relocating it when outdated. */
+/**
+ * Finds the hunk of the current diff a review thread refers to, always by
+ * matching the commented line's content against the file as it now stands.
+ */
 export function anchorComment(options: AnchorCommentOptions): AnchorResult {
   const {
-    line,
-    startLine,
     originalLine,
     originalStartLine,
     diffSide,
     diff,
     sideFileContent,
     diffHunk,
+    originalDiff = "",
+    positionDiff = "",
   } = options;
 
   if (diff.trim() === "") {
@@ -173,46 +193,58 @@ export function anchorComment(options: AnchorCommentOptions): AnchorResult {
       line: null,
       startLine: null,
       side: diffSide,
+      via: "content",
+      confirmed: false,
     };
   }
 
   const hunks = parseUnifiedDiff(diff);
-
-  if (line !== null) {
-    const hunk = findHunkForLine(hunks, line, diffSide);
-    if (hunk !== null) {
-      return {
-        status: "anchored",
-        hunk,
-        line,
-        startLine: startLine ?? line,
-        side: diffSide,
-      };
-    }
-  }
-
   const anchor = anchorText(diffHunk);
-  if (anchor === "" || sideFileContent === null) {
+  const matched =
+    anchor === "" || sideFileContent === null
+      ? null
+      : relocatedLine(sideFileContent, anchor, originalLine);
+
+  // Content first: when the commented line still reads the same, nothing
+  // beats finding it. Position second: when it was rewritten — at worst the
+  // anchor is a bare brace — git's alignment of the two file versions still
+  // knows where the code went.
+  const located: { line: number; via: "content" | "position" } | null =
+    matched !== null
+      ? { line: matched, via: "content" }
+      : originalLine === null
+        ? null
+        : (() => {
+            const mapped = mapLineThroughDiff(positionDiff, originalLine);
+            return mapped === null ? null : { line: mapped, via: "position" };
+          })();
+
+  if (located === null) {
     return notInDiff(diffSide);
   }
 
-  const relocated = relocatedLine(sideFileContent, anchor, originalLine);
-  if (relocated === null) {
-    return notInDiff(diffSide);
-  }
-
-  const hunk = findHunkForLine(hunks, relocated, diffSide);
+  const hunk = findHunkForLine(hunks, located.line, diffSide);
   return hunk === null
     ? notInDiff(diffSide)
     : {
-        status: "relocated",
+        status: "matched",
         hunk,
-        line: relocated,
-        startLine: relocatedStartLine(
-          relocated,
+        line: located.line,
+        startLine: matchedStartLine(
+          located.line,
           originalLine,
           originalStartLine,
         ),
         side: diffSide,
+        via: located.via,
+        confirmed:
+          located.via === "content" &&
+          confirmsAnchor(
+            originalDiff,
+            diff,
+            diffSide,
+            originalLine,
+            located.line,
+          ),
       };
 }

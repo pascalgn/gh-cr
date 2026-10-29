@@ -1,5 +1,6 @@
 import { Anchor, Group, Text } from "@mantine/core";
 
+import { CommentBody } from "./CommentBody";
 import { RelativeTime } from "./RelativeTime";
 import type { ReviewComment } from "../types";
 
@@ -22,7 +23,7 @@ export function Comment({ comment }: { comment: ReviewComment }) {
           on GitHub
         </Anchor>
       </Group>
-      <p className="comment-body">{comment.body}</p>
+      <CommentBody body={comment.body} />
     </div>
   );
 }

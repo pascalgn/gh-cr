@@ -11,6 +11,7 @@
     "format": "prettier --write ."
   },
   "dependencies": {
+    "@mantine/code-highlight": "^8.3.18",
     "@mantine/core": "^8.3.6",
     "@mantine/hooks": "^8.3.6",
     "@octokit/graphql": "^9.0.1",
@@ -21,7 +22,12 @@
     "isbot": "^5.1.36",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router": "^8.5.0"
+    "react-markdown": "^10.1.0",
+    "react-router": "^8.5.0",
+    "rehype-raw": "^7.0.0",
+    "rehype-sanitize": "^6.0.0",
+    "remark-gfm": "^4.0.1",
+    "shiki": "^4.5.0"
   },
   "devDependencies": {
     "@react-router/dev": "^8.5.0",

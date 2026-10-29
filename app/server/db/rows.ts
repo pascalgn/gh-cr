@@ -31,8 +31,6 @@ export interface ReviewThreadRow {
   id: string;
   pull_request_id: number;
   path: string;
-  line: number | null;
-  start_line: number | null;
   original_line: number | null;
   original_start_line: number | null;
   diff_side: string;
@@ -100,8 +98,6 @@ export function toReviewThread(row: ReviewThreadRow): ReviewThread {
     id: row.id,
     pullRequestId: row.pull_request_id,
     path: row.path,
-    line: row.line,
-    startLine: row.start_line,
     originalLine: row.original_line,
     originalStartLine: row.original_start_line,
     diffSide: row.diff_side as DiffSide,

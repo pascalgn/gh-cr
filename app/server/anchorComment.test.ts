@@ -43,8 +43,6 @@ describe("anchorComment", () => {
   it("reports the file is not in the diff when the diff is empty", () => {
     expect(
       anchorComment({
-        line: 47,
-        startLine: null,
         originalLine: 47,
         originalStartLine: null,
         diffSide: "RIGHT",
@@ -58,13 +56,50 @@ describe("anchorComment", () => {
       line: null,
       startLine: null,
       side: "RIGHT",
+      via: "content",
+      confirmed: false,
     });
   });
 
-  it("anchors a still-anchored thread to the hunk covering its line", () => {
+  it("matches a thread to the hunk covering the line its text now sits on", () => {
     const result = anchorComment({
-      line: 12,
-      startLine: null,
+      originalLine: 12,
+      originalStartLine: null,
+      diffSide: "RIGHT",
+      diff: currentDiff,
+      sideFileContent: headFileWithAnchorAt(12),
+      diffHunk: originalDiffHunk,
+    });
+
+    expect(result.status).toBe("matched");
+    expect(result.line).toBe(12);
+    expect(result.hunk?.header).toBe(
+      '@@ -8,6 +9,7 @@ import { rate } from "./rate";',
+    );
+  });
+
+  it("matches an outdated thread from line 47 to line 49", () => {
+    const result = anchorComment({
+      originalLine: 47,
+      originalStartLine: null,
+      diffSide: "RIGHT",
+      diff: currentDiff,
+      sideFileContent: headFileWithAnchorAt(49),
+      diffHunk: originalDiffHunk,
+    });
+
+    expect(result.status).toBe("matched");
+    expect(result.line).toBe(49);
+    expect(result.hunk?.header).toBe(
+      "@@ -43,7 +45,8 @@ export function total(items: Item[]) {",
+    );
+    expect(result.hunk?.text).toContain(ANCHOR);
+  });
+
+  it("follows the content even when the original line sits in another hunk", () => {
+    // Line 12 is inside the first hunk, so a line-number-trusting anchor would
+    // stop there. The commented text only exists at line 49, and content wins.
+    const result = anchorComment({
       originalLine: 12,
       originalStartLine: null,
       diffSide: "RIGHT",
@@ -73,18 +108,18 @@ describe("anchorComment", () => {
       diffHunk: originalDiffHunk,
     });
 
-    expect(result.status).toBe("anchored");
-    expect(result.line).toBe(12);
+    expect(result.status).toBe("matched");
+    expect(result.line).toBe(49);
     expect(result.hunk?.header).toBe(
-      '@@ -8,6 +9,7 @@ import { rate } from "./rate";',
+      "@@ -43,7 +45,8 @@ export function total(items: Item[]) {",
     );
   });
 
-  it("relocates an outdated thread from line 47 to line 49", () => {
+  it("matches a thread that has no line number on the current side at all", () => {
+    // GitHub reports no head-side position for this thread, only the original
+    // one it was written against; the content is still enough to place it.
     const result = anchorComment({
-      line: null,
-      startLine: null,
-      originalLine: 47,
+      originalLine: null,
       originalStartLine: null,
       diffSide: "RIGHT",
       diff: currentDiff,
@@ -92,18 +127,15 @@ describe("anchorComment", () => {
       diffHunk: originalDiffHunk,
     });
 
-    expect(result.status).toBe("relocated");
+    expect(result.status).toBe("matched");
     expect(result.line).toBe(49);
     expect(result.hunk?.header).toBe(
       "@@ -43,7 +45,8 @@ export function total(items: Item[]) {",
     );
-    expect(result.hunk?.text).toContain(ANCHOR);
   });
 
   it("picks the occurrence nearest to the original line when the text repeats", () => {
     const result = anchorComment({
-      line: null,
-      startLine: null,
       originalLine: 47,
       originalStartLine: null,
       diffSide: "RIGHT",
@@ -112,14 +144,12 @@ describe("anchorComment", () => {
       diffHunk: originalDiffHunk,
     });
 
-    expect(result.status).toBe("relocated");
+    expect(result.status).toBe("matched");
     expect(result.line).toBe(49);
   });
 
   it("prefers the occurrence nearest the top when there is no original line", () => {
     const result = anchorComment({
-      line: null,
-      startLine: null,
       originalLine: null,
       originalStartLine: null,
       diffSide: "RIGHT",
@@ -128,31 +158,13 @@ describe("anchorComment", () => {
       diffHunk: originalDiffHunk,
     });
 
-    expect(result.status).toBe("relocated");
+    expect(result.status).toBe("matched");
     expect(result.line).toBe(12);
-  });
-
-  it("falls through to relocation when the anchored line is outside every hunk", () => {
-    const result = anchorComment({
-      line: 30,
-      startLine: null,
-      originalLine: 47,
-      originalStartLine: null,
-      diffSide: "RIGHT",
-      diff: currentDiff,
-      sideFileContent: headFileWithAnchorAt(49),
-      diffHunk: originalDiffHunk,
-    });
-
-    expect(result.status).toBe("relocated");
-    expect(result.line).toBe(49);
   });
 
   it("reports not-in-diff when the anchor text is gone from the head file", () => {
     expect(
       anchorComment({
-        line: null,
-        startLine: null,
         originalLine: 47,
         originalStartLine: null,
         diffSide: "RIGHT",
@@ -166,14 +178,14 @@ describe("anchorComment", () => {
       line: null,
       startLine: null,
       side: "RIGHT",
+      via: "content",
+      confirmed: false,
     });
   });
 
   it("reports not-in-diff when the anchor text survives outside every hunk", () => {
     expect(
       anchorComment({
-        line: null,
-        startLine: null,
         originalLine: 47,
         originalStartLine: null,
         diffSide: "RIGHT",
@@ -187,14 +199,14 @@ describe("anchorComment", () => {
       line: null,
       startLine: null,
       side: "RIGHT",
+      via: "content",
+      confirmed: false,
     });
   });
 
   it("reports not-in-diff when the file no longer exists at head", () => {
     expect(
       anchorComment({
-        line: null,
-        startLine: null,
         originalLine: 47,
         originalStartLine: null,
         diffSide: "RIGHT",
@@ -208,14 +220,14 @@ describe("anchorComment", () => {
       line: null,
       startLine: null,
       side: "RIGHT",
+      via: "content",
+      confirmed: false,
     });
   });
 
   it("reports not-in-diff when the anchor line is blank", () => {
     expect(
       anchorComment({
-        line: null,
-        startLine: null,
         originalLine: 47,
         originalStartLine: null,
         diffSide: "RIGHT",
@@ -230,13 +242,13 @@ describe("anchorComment", () => {
       line: null,
       startLine: null,
       side: "RIGHT",
+      via: "content",
+      confirmed: false,
     });
   });
 
   it("matches the anchor text ignoring trailing whitespace", () => {
     const result = anchorComment({
-      line: null,
-      startLine: null,
       originalLine: 47,
       originalStartLine: null,
       diffSide: "RIGHT",
@@ -245,7 +257,7 @@ describe("anchorComment", () => {
       diffHunk: `${originalDiffHunk}  `,
     });
 
-    expect(result.status).toBe("relocated");
+    expect(result.status).toBe("matched");
     expect(result.line).toBe(49);
   });
 });
@@ -254,7 +266,7 @@ describe("anchorComment", () => {
  * Shapes taken from sindresorhus/env-paths#16, where every thread is outdated and
  * the commented line survives at head in a slightly different form.
  */
-describe("anchorComment relocation of changed lines", () => {
+describe("anchorComment matching of changed lines", () => {
   const windowsConfigLine =
     "- Windows: `%APPDATA%\\MyApp-nodejs\\Config` (for example, `C:\\Users\\USERNAME\\AppData\\Roaming\\MyApp-nodejs\\Config`)";
 
@@ -286,10 +298,8 @@ index 1111111..2222222 100644
  
 +- Windows: \`%APPDATA%\\MyApp-nodejs\\Config\``;
 
-  it("relocates when the commented line was extended (anchor is a substring)", () => {
+  it("matches when the commented line was extended (anchor is a substring)", () => {
     const result = anchorComment({
-      line: null,
-      startLine: null,
       originalLine: 66,
       originalStartLine: null,
       diffSide: "RIGHT",
@@ -298,7 +308,7 @@ index 1111111..2222222 100644
       diffHunk: extendedDiffHunk,
     });
 
-    expect(result.status).toBe("relocated");
+    expect(result.status).toBe("matched");
     expect(result.line).toBe(72);
     expect(result.hunk?.header).toBe(
       "@@ -62,8 +62,12 @@ Directory for config files.",
@@ -327,10 +337,8 @@ index 3333333..4444444 100644
  		*/
 +		Example locations (with the default \`nodejs\` [suffix](#suffix)):`;
 
-  it("relocates a reworded line to the occurrence nearest the original line", () => {
+  it("matches a reworded line to the occurrence nearest the original line", () => {
     const result = anchorComment({
-      line: null,
-      startLine: null,
       originalLine: 61,
       originalStartLine: null,
       diffSide: "RIGHT",
@@ -339,7 +347,7 @@ index 3333333..4444444 100644
       diffHunk: rewordedDiffHunk,
     });
 
-    expect(result.status).toBe("relocated");
+    expect(result.status).toBe("matched");
     // Lines 17, 28, 39, 50 and 61 are identical and all inside the hunk, so only
     // the distance to the original line can pick the right one.
     expect(result.line).toBe(61);
@@ -347,8 +355,6 @@ index 3333333..4444444 100644
 
   it("picks a different identical occurrence when the original line moves", () => {
     const result = anchorComment({
-      line: null,
-      startLine: null,
       originalLine: 29,
       originalStartLine: null,
       diffSide: "RIGHT",
@@ -373,8 +379,6 @@ index 3333333..4444444 100644
     ].join("\n");
 
     const result = anchorComment({
-      line: null,
-      startLine: null,
       originalLine: 6,
       originalStartLine: null,
       diffSide: "RIGHT",
@@ -398,43 +402,27 @@ index 3333333..4444444 100644
       line: null,
       startLine: null,
       side: "RIGHT",
+      via: "content",
+      confirmed: false,
     });
   });
 });
 
 describe("anchorComment line ranges", () => {
-  it("keeps the whole range of a still-anchored multi-line thread", () => {
+  /** A diff whose only hunk covers the first five lines of the new file. */
+  const topOfFileDiff = `diff --git a/app/total.ts b/app/total.ts
+--- a/app/total.ts
++++ b/app/total.ts
+@@ -1,4 +1,5 @@
+   // filler 1
+   // filler 2
++  return subtotal + tax;
+   // filler 4
+   // filler 5
+`;
+
+  it("gives a single-line comment the five lines of context leading up to it", () => {
     const result = anchorComment({
-      line: 12,
-      startLine: 10,
-      originalLine: 12,
-      originalStartLine: 10,
-      diffSide: "RIGHT",
-      diff: currentDiff,
-      sideFileContent: headFileWithAnchorAt(49),
-      diffHunk: originalDiffHunk,
-    });
-
-    expect(result.status).toBe("anchored");
-    expect(result.startLine).toBe(10);
-    expect(result.line).toBe(12);
-    expect(result.side).toBe("RIGHT");
-  });
-
-  it("treats a null start line as a single-line range", () => {
-    const anchored = anchorComment({
-      line: 12,
-      startLine: null,
-      originalLine: 12,
-      originalStartLine: null,
-      diffSide: "RIGHT",
-      diff: currentDiff,
-      sideFileContent: headFileWithAnchorAt(49),
-      diffHunk: originalDiffHunk,
-    });
-    const relocated = anchorComment({
-      line: null,
-      startLine: null,
       originalLine: 47,
       originalStartLine: null,
       diffSide: "RIGHT",
@@ -443,16 +431,30 @@ describe("anchorComment line ranges", () => {
       diffHunk: originalDiffHunk,
     });
 
-    expect(anchored.startLine).toBe(anchored.line);
-    expect(relocated.status).toBe("relocated");
-    expect(relocated.startLine).toBe(49);
-    expect(relocated.line).toBe(49);
+    expect(result.status).toBe("matched");
+    expect(result.line).toBe(49);
+    expect(result.startLine).toBe(44);
+    // Six lines in total: the matched line plus its five lines of lead-in.
+    expect((result.line ?? 0) - (result.startLine ?? 0) + 1).toBe(6);
   });
 
-  it("preserves the original span when relocating a multi-line thread", () => {
+  it("clamps a single-line comment's context at the top of the file", () => {
     const result = anchorComment({
-      line: null,
-      startLine: null,
+      originalLine: 3,
+      originalStartLine: null,
+      diffSide: "RIGHT",
+      diff: topOfFileDiff,
+      sideFileContent: headFileWithAnchorAt(3),
+      diffHunk: originalDiffHunk,
+    });
+
+    expect(result.status).toBe("matched");
+    expect(result.line).toBe(3);
+    expect(result.startLine).toBe(1);
+  });
+
+  it("reproduces a multi-line comment's own span rather than the default", () => {
+    const result = anchorComment({
       originalLine: 47,
       originalStartLine: 45,
       diffSide: "RIGHT",
@@ -463,15 +465,28 @@ describe("anchorComment line ranges", () => {
 
     // The anchor text matched line 49, and the original range spanned 45..47,
     // so the reconstructed range is the same two lines back from the match.
-    expect(result.status).toBe("relocated");
+    expect(result.status).toBe("matched");
     expect(result.startLine).toBe(47);
+    expect(result.line).toBe(49);
+  });
+
+  it("keeps a range of one when the original start and end line are the same", () => {
+    const result = anchorComment({
+      originalLine: 47,
+      originalStartLine: 47,
+      diffSide: "RIGHT",
+      diff: currentDiff,
+      sideFileContent: headFileWithAnchorAt(49),
+      diffHunk: originalDiffHunk,
+    });
+
+    expect(result.status).toBe("matched");
+    expect(result.startLine).toBe(49);
     expect(result.line).toBe(49);
   });
 
   it("clamps a reconstructed start that would fall before the first line", () => {
     const result = anchorComment({
-      line: null,
-      startLine: null,
       originalLine: 60,
       originalStartLine: 1,
       diffSide: "RIGHT",
@@ -480,7 +495,7 @@ describe("anchorComment line ranges", () => {
       diffHunk: originalDiffHunk,
     });
 
-    expect(result.status).toBe("relocated");
+    expect(result.status).toBe("matched");
     expect(result.line).toBe(12);
     expect(result.startLine).toBe(1);
   });
@@ -488,45 +503,46 @@ describe("anchorComment line ranges", () => {
 
 describe("anchorComment on the old side", () => {
   /** Old-side line 8 is inside `@@ -8,6`, but outside the new-side range `+9,7`. */
-  it("anchors a LEFT thread against the hunk's old-side range", () => {
+  it("matches a LEFT thread against the hunk's old-side range", () => {
     const result = anchorComment({
-      line: 8,
-      startLine: null,
       originalLine: 8,
       originalStartLine: null,
       diffSide: "LEFT",
       diff: currentDiff,
-      sideFileContent: headFileWithAnchorAt(49),
+      sideFileContent: headFileWithAnchorAt(8),
       diffHunk: originalDiffHunk,
     });
 
-    expect(result.status).toBe("anchored");
+    expect(result.status).toBe("matched");
     expect(result.line).toBe(8);
-    expect(result.startLine).toBe(8);
+    expect(result.startLine).toBe(3);
     expect(result.side).toBe("LEFT");
   });
 
-  it("does not anchor the same line on the RIGHT side", () => {
-    const result = anchorComment({
-      line: 8,
-      startLine: null,
-      originalLine: 8,
-      originalStartLine: null,
-      diffSide: "RIGHT",
-      diff: currentDiff,
-      sideFileContent: headFileWithAnchorAt(49),
-      diffHunk: originalDiffHunk,
-    });
-
-    expect(result.status).toBe("relocated");
-    expect(result.line).toBe(49);
-  });
-
-  it("relocates a LEFT thread inside the base file and the old-side range", () => {
-    // Line 44 of the base file is covered by `@@ -43,7` but by no new-side range.
-    const result = anchorComment({
+  it("does not match the same line on the RIGHT side", () => {
+    expect(
+      anchorComment({
+        originalLine: 8,
+        originalStartLine: null,
+        diffSide: "RIGHT",
+        diff: currentDiff,
+        sideFileContent: headFileWithAnchorAt(8),
+        diffHunk: originalDiffHunk,
+      }),
+    ).toEqual({
+      status: "not-in-diff",
+      hunk: null,
       line: null,
       startLine: null,
+      side: "RIGHT",
+      via: "content",
+      confirmed: false,
+    });
+  });
+
+  it("matches a LEFT thread inside the base file and the old-side range", () => {
+    // Line 44 of the base file is covered by `@@ -43,7` but by no new-side range.
+    const result = anchorComment({
       originalLine: 44,
       originalStartLine: null,
       diffSide: "LEFT",
@@ -535,7 +551,7 @@ describe("anchorComment on the old side", () => {
       diffHunk: originalDiffHunk,
     });
 
-    expect(result.status).toBe("relocated");
+    expect(result.status).toBe("matched");
     expect(result.line).toBe(44);
     expect(result.side).toBe("LEFT");
   });

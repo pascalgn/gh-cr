@@ -6,6 +6,7 @@ import { Panel } from "../components/Panel";
 import { ReviewThreadView } from "../components/ReviewThreadView";
 import { ThreadBadges } from "../components/ThreadBadges";
 import { ThreadFilters } from "../components/ThreadFilters";
+import { ThreadResolveButton } from "../components/ThreadResolveButton";
 import { threadLabel } from "../components/threadLabel";
 import { anchorThreads } from "../server/anchorThreads";
 import { getPullRequest } from "../server/db/getPullRequest";
@@ -25,7 +26,13 @@ export async function loader({ params }: Route.LoaderArgs) {
   // Only the anchored hunk is rendered here, so the full per-file diffs stay
   // on the server rather than being serialised once per thread.
   return {
-    anchored: anchored.map(({ thread, anchor }) => ({ thread, anchor })),
+    headSha: pullRequest.headSha,
+    anchored: anchored.map(({ thread, anchor, originalDiff, currentPath }) => ({
+      thread,
+      anchor,
+      originalDiff,
+      currentPath,
+    })),
   };
 }
 
@@ -48,7 +55,7 @@ export default function PullRequestComments({
   loaderData,
   params,
 }: Route.ComponentProps) {
-  const { anchored } = loaderData;
+  const { anchored, headSha } = loaderData;
   const [searchParams, setSearchParams] = useSearchParams();
   const base = `/pr/${params.owner}/${params.repo}/${params.number}`;
 
@@ -99,7 +106,7 @@ export default function PullRequestComments({
           No comments match the current filters.
         </Text>
       ) : (
-        visible.map(({ thread, anchor }) => (
+        visible.map(({ thread, anchor, originalDiff, currentPath }) => (
           <Panel
             key={thread.id}
             title={
@@ -117,10 +124,17 @@ export default function PullRequestComments({
                   {thread.comments.length}{" "}
                   {thread.comments.length === 1 ? "comment" : "comments"}
                 </Text>
+                <ThreadResolveButton thread={thread} />
               </Group>
             }
           >
-            <ReviewThreadView thread={thread} anchor={anchor} />
+            <ReviewThreadView
+              thread={thread}
+              anchor={anchor}
+              originalDiff={originalDiff}
+              currentPath={currentPath}
+              headSha={headSha}
+            />
           </Panel>
         ))
       )}

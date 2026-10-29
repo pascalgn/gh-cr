@@ -16,8 +16,6 @@ export interface FetchedReviewComment {
 export interface FetchedReviewThread {
   id: string;
   path: string;
-  line: number | null;
-  startLine: number | null;
   originalLine: number | null;
   originalStartLine: number | null;
   diffSide: DiffSide;
@@ -64,8 +62,6 @@ interface GraphqlResponse {
           isResolved: boolean;
           isOutdated: boolean;
           path: string;
-          line: number | null;
-          startLine: number | null;
           originalLine: number | null;
           originalStartLine: number | null;
           diffSide: DiffSide;
@@ -108,8 +104,6 @@ const query = `
             isResolved
             isOutdated
             path
-            line
-            startLine
             originalLine
             originalStartLine
             diffSide
@@ -160,8 +154,6 @@ export async function fetchPullRequest(
     threads: pullRequest.reviewThreads.nodes.map((thread) => ({
       id: thread.id,
       path: thread.path,
-      line: thread.line,
-      startLine: thread.startLine,
       originalLine: thread.originalLine,
       originalStartLine: thread.originalStartLine,
       diffSide: thread.diffSide,

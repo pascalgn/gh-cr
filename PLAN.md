@@ -11,7 +11,7 @@ end to end, **read-only**. Writes come after.
 | Git access     | Shell out to the `git` CLI via a thin `server/git/*` wrapper                                               | **Deviates from SPEC** (nodegit). nodegit's latest release targets Node ≤20 and will not build on the local Node 24. The CLI also gives us three-dot diffs, rename detection and `blame` for free. The wrapper keeps it swappable. |
 | Backend        | No separate service. One React Router (framework mode) app; loaders/actions import `app/server/*` directly | Single process, shared types, no API schema to maintain.                                                                                                                                                                           |
 | v1 scope       | Read-only                                                                                                  | No comment creation / reply / resolve yet.                                                                                                                                                                                         |
-| Diff rendering | Raw unified diff text in a `<pre>`, light +/−/@@ coloring                                                  | No row model, no gutters yet. Enough to validate anchoring; a real renderer is a later pass.                                                                                                                                       |
+| Diff rendering | Raw unified diff text in a `<pre>`, light +/−/@@ coloring                                                  | No two-column split view. The gutter is sticky, so numbers stay put while long lines scroll sideways.                                                                                                                              |
 | DB             | `better-sqlite3`, hand-written SQL, one `schema.ts` string applied on boot                                 | Synchronous API fits loaders well. The schema is inlined as a TS string rather than a `.sql` file because vite does not emit the `.sql` into `build/server/`.                                                                      |
 | GitHub API     | `@octokit/graphql` for PR + review threads, `@octokit/rest` only if needed                                 | Thread resolution state (`isResolved`) exists **only** in GraphQL, and we want that field from day one.                                                                                                                            |
 | Auth           | `GITHUB_TOKEN` env, falling back to `gh auth token`                                                        | `gh` is already authenticated locally. Token is never persisted.                                                                                                                                                                   |
@@ -84,13 +84,53 @@ about". v1 heuristic, in order:
 The "original diff" section below it needs no computation — GitHub hands us `diff_hunk`
 verbatim.
 
-GitHub reports a comment's position as a _range on a side_, and all four fields matter:
-`startLine`/`line` at head, `originalStartLine`/`originalLine` at the commit it was
-written against (the original pair survives outdating, the current pair goes null), and
-`diffSide` — `RIGHT` indexes the head file, `LEFT` the base file. So anchoring is
-side-aware (old-side hunk ranges and base content for `LEFT`) and range-aware: a
-relocated multi-line comment keeps its original span. Both diffs highlight the commented
-lines.
+GitHub reports a comment's position as a _range on a side_, but only the original
+pair is used: `originalStartLine`/`originalLine`, numbered against the commit the
+comment was written on, plus `diffSide` (`RIGHT` indexes the head file, `LEFT` the base
+file). The head-side `line`/`startLine` are deliberately not fetched at all — they are
+null for outdated threads anyway, and ignoring them leaves one code path instead of
+two: the current diff is **always** located by matching content, never by trusting a
+line number.
+
+A file renamed after a comment was written no longer exists under the path the
+comment names, which would make its current diff look empty. The path is followed
+forward with `git log --diff-filter=R -M` over the range from the comment's own commit
+to head, chaining each rename in turn. Per-commit rather than one `diff -M` of the
+endpoints on purpose: a file renamed and then heavily edited drifts below git's
+similarity threshold, so the end-to-end diff reports a delete plus an add and the trail
+is lost — while each individual rename stays obvious.
+
+The commented _section_ is therefore:
+
+- `originalStartLine` set → exactly that range;
+- `originalStartLine` null (a single-line comment) → `originalLine` and the five lines
+  before it, which is the context that makes a one-line comment readable.
+
+The original diff is not GitHub's captured `diffHunk` — that fragment is truncated at
+the commented line, so it can never show what came after it. Instead the real diff is
+rebuilt locally from `originalCommitSha`: `git diff $(merge-base base <sha>) <sha> --
+<path>`. Refresh pins every such commit under `refs/gh-cr/commits/<sha>`, fetching it by
+full sha when a force-push has orphaned it — GitHub still serves those, and the ref
+keeps gc from pruning them. The captured fragment stays as the fallback for a commit
+GitHub no longer has. The rebuilt diff is trimmed to the section, with a toggle
+showing that file's whole diff, and a modal showing the complete file with no
+unchanged lines elided. The current diff shows the matched hunk — unless the match is
+_corroborated_, in which case it is trimmed to end at the matched line, exactly as
+the original section ends at `originalLine`.
+
+When the commented code was not merely moved but rewritten, content matching has nothing
+to work with — at the extreme the anchor line is a bare `}`. The fallback is positional:
+the file's content at the comment's commit is diffed against its content at head, and
+the original line is followed through git's own alignment of the two versions. A line
+that survived maps to itself; one that was replaced maps to where its replacement sits.
+
+Corroboration compares the matched line and up to five lines after it against the lines
+that followed the comment in its original diff. One matching line is not proof — the
+same line occurs in many places — so only when the lines after it line up too is the
+match tight enough to hide the surrounding context. When they do not, the section is still centred on the match
+but widened by ten lines either side: an uncertain anchor is exactly when the reader
+needs surrounding context to judge for themselves, while showing the whole hunk is no
+help when the hunk is an entire added file.
 
 ## Routes
 
@@ -135,6 +175,7 @@ app/
 
 ## Explicitly out of scope for v1
 
-Writes (new comment / reply / resolve), issue-level (non-code) comments, syntax
+Pending reviews — comments post standalone, one at a time — issue-level
+(non-code) comments, syntax
 highlighting, split diff view, multi-user or multi-token, review/approval state,
 per-commit diff ranges (v1 always diffs base…head, as SPEC requires).

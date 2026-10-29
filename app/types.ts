@@ -35,13 +35,13 @@ export interface ReviewThread {
   id: string;
   pullRequestId: number;
   path: string;
-  /** Last line of the range, at head. Null when the thread is outdated. */
-  line: number | null;
-  /** First line of the range, at head. Equals `line` for single-line threads. */
-  startLine: number | null;
   /** Last line of the range, at the commit the thread was written against. */
   originalLine: number | null;
-  /** First line of the original range. Survives outdating, unlike `startLine`. */
+  /**
+   * First line of the original range. Null for a single-line comment, in which
+   * case the commented section is taken as the lines leading up to
+   * `originalLine` — see `originalRange`.
+   */
   originalStartLine: number | null;
   /** RIGHT anchors to the head file, LEFT to the base file. */
   diffSide: DiffSide;
@@ -99,9 +99,12 @@ export interface DiffHunk {
   text: string;
 }
 
-/** Why the anchoring heuristic produced (or failed to produce) a hunk. */
-export type AnchorStatus =
-  "anchored" | "relocated" | "not-in-diff" | "file-not-in-diff";
+/**
+ * Why the anchoring heuristic produced (or failed to produce) a hunk. The
+ * current diff is always located by matching content, never by trusting a line
+ * number GitHub reported against head.
+ */
+export type AnchorStatus = "matched" | "not-in-diff" | "file-not-in-diff";
 
 export interface AnchorResult {
   status: AnchorStatus;
@@ -109,8 +112,20 @@ export interface AnchorResult {
   hunk: DiffHunk | null;
   /** Last line the thread was matched to, on `side`. Null when not found. */
   line: number | null;
-  /** First line of the matched range. Equals `line` for single-line threads. */
+  /** First line of the matched section, always at or before `line`. */
   startLine: number | null;
   /** Which side of the diff `line`/`startLine` index. */
   side: DiffSide;
+  /**
+   * How the line was found: by matching the commented code's text, or by
+   * following git's alignment of the file's old and new versions when the
+   * code was rewritten past recognition.
+   */
+  via: "content" | "position";
+  /**
+   * Whether the lines following the match also match those that followed the
+   * comment originally. Only then is the match tight enough to trim the
+   * current diff down to the section, rather than showing the whole hunk.
+   */
+  confirmed: boolean;
 }

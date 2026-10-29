@@ -29,8 +29,6 @@ CREATE TABLE IF NOT EXISTS review_threads (
   id TEXT PRIMARY KEY,
   pull_request_id INTEGER NOT NULL REFERENCES pull_requests (id) ON DELETE CASCADE,
   path TEXT NOT NULL,
-  line INTEGER,
-  start_line INTEGER,
   original_line INTEGER,
   original_start_line INTEGER,
   diff_side TEXT NOT NULL,

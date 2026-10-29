@@ -2,8 +2,10 @@
   --diff-add-bg: #e6ffec;
   --diff-del-bg: #ffebe9;
   --diff-meta-fg: #57606a;
-  --diff-highlight-bg: rgba(212, 167, 44, 0.18);
-  --diff-highlight-accent: #bf8700;
+  --diff-gutter-bg: #f6f8fa;
+  --diff-gutter-border: #d8dee4;
+  --diff-add-gutter-bg: #ccffd8;
+  --diff-del-gutter-bg: #ffd7d5;
   --diff-font:
     ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
@@ -12,8 +14,10 @@
   --diff-add-bg: #12261e;
   --diff-del-bg: #25171c;
   --diff-meta-fg: #8b949e;
-  --diff-highlight-bg: rgba(210, 153, 34, 0.16);
-  --diff-highlight-accent: #d29922;
+  --diff-gutter-bg: #161b22;
+  --diff-gutter-border: #30363d;
+  --diff-add-gutter-bg: #1b4721;
+  --diff-del-gutter-bg: #542426;
 }
 
 body {

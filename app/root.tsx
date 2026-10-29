@@ -1,6 +1,8 @@
 import "@mantine/core/styles.css";
+import "@mantine/code-highlight/styles.css";
 import "./app.css";
 
+import { CodeHighlightAdapterProvider } from "@mantine/code-highlight";
 import {
   ColorSchemeScript,
   MantineProvider,
@@ -15,6 +17,7 @@ import {
   ScrollRestoration,
 } from "react-router";
 
+import { shikiAdapter } from "./components/shikiAdapter";
 import type { Route } from "./+types/root";
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -28,7 +31,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <ColorSchemeScript />
       </head>
       <body>
-        <MantineProvider>{children}</MantineProvider>
+        <MantineProvider>
+          <CodeHighlightAdapterProvider adapter={shikiAdapter}>
+            {children}
+          </CodeHighlightAdapterProvider>
+        </MantineProvider>
         <ScrollRestoration />
         <Scripts />
       </body>

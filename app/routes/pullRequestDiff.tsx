@@ -1,7 +1,7 @@
 import { Alert, Paper, Stack, Text } from "@mantine/core";
 import { useState } from "react";
 
-import { DiffText } from "../components/DiffText";
+import { CommentableDiff } from "../components/CommentableDiff";
 import { FileTree } from "../components/FileTree";
 import { Panel } from "../components/Panel";
 import { getPullRequest } from "../server/db/getPullRequest";
@@ -87,7 +87,7 @@ export default function PullRequestDiff({ loaderData }: Route.ComponentProps) {
                   No textual diff (binary or mode-only change).
                 </Text>
               ) : (
-                <DiffText diff={file.diff} />
+                <CommentableDiff diff={file.diff} path={file.path} />
               )}
             </Panel>
           ))

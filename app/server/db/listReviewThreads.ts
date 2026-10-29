@@ -12,7 +12,7 @@ export function listReviewThreads(
     .prepare(
       `SELECT * FROM review_threads
        WHERE pull_request_id = ?
-       ORDER BY path ASC, COALESCE(line, original_line, 0) ASC, id ASC`,
+       ORDER BY path ASC, COALESCE(original_line, 0) ASC, id ASC`,
     )
     .all(pullRequestId) as ReviewThreadRow[];
   const commentRows = database
